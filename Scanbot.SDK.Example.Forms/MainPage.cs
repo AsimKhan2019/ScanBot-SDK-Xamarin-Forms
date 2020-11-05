@@ -67,6 +67,20 @@ namespace Scanbot.SDK.Example.Forms
          */
         async void ScanningUIClicked(object sender, EventArgs e)
         {
+            // Preprocessor flags to identify the platform you're currently on,
+            // and make sure they aren't even compiled for the wrong one
+            // ... And we're ready to rumble!
+            bool didTheThing = false;
+#if __ANDROID__
+            // Call the dirty, static function from our native MainActivity
+            didTheThing = await Droid.MainActivity.StartMultipleObjectScanner();
+#else
+            // And the equivalent from iOS AppDelegate
+            didTheThing = await iOS.AppDelegate.StartMultipleObjectsScanner();
+#endif
+            Console.WriteLine("Did we make a native call? " + didTheThing + ", we did.");
+            return;
+
             if (!SDKUtils.CheckLicense(this)) { return; }
 
             var configuration = new DocumentScannerConfiguration

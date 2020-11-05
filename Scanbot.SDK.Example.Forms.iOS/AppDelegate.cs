@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
+using System.Threading.Tasks;
 using Foundation;
+using ScanbotSDK.iOS;
 using ScanbotSDK.Xamarin.Forms;
 using UIKit;
 
@@ -54,6 +55,44 @@ namespace Scanbot.SDK.Example.Forms.iOS
             Directory.CreateDirectory(customDocumentsFolder);
 
             return customDocumentsFolder;
+        }
+
+        static TaskCompletionSource<bool> source;
+        public static Task<bool> StartMultipleObjectsScanner()
+        {
+            // iOS does not have a sweet internal wrapper, so we have to do it the hard way.
+            // Create the task, return that one right away...
+            // and later execute it in the handler we create.
+            source = new TaskCompletionSource<bool>();
+
+            var configuration = new SBSDKUIMultipleObjectScannerConfiguration(
+                new SBSDKUIMultipleObjectScannerUIConfiguration { },
+                new SBSDKUIMultipleObjectScannerTextConfiguration { FlashButtonTitle = "Pew!" },
+                new SBSDKUIMultipleObjectScannerBehaviorConfiguration { });
+
+            // Implement custom delegate 
+            var handler = new MultipleObjectResultHandler();
+            var controller = SBSDKUIMultipleObjectScannerViewController.CreateNewWithConfiguration(configuration, handler);
+
+            // Access the root view controller. Don't worry, the root is the only one available anyway
+            var root = UIApplication.SharedApplication.KeyWindow.RootViewController;
+            // Make sure it's full screen
+            controller.ModalPresentationStyle = UIModalPresentationStyle.FullScreen;
+            root.PresentViewController(controller, true, null);
+
+            return source.Task;
+        }
+
+        class MultipleObjectResultHandler : SBSDKUIMultipleObjectScannerViewControllerDelegate
+        {
+            public override void DidFinishWithDocument(SBSDKUIMultipleObjectScannerViewController viewController, SBSDKUIDocument document)
+            {
+                // And here we, again, have our pages that can be accessed
+                // and relevant information retrieved via document.PageAtIndex
+                var pageCount = document.NumberOfPages;
+                // As with android, just return true to prove we've been here
+                source.SetResult(true);
+            }
         }
     }
 }
